@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace System.Collections.Rolling
 {
-    internal class BufferBoundValue<T>
+    internal class BufferSingle<T>
     {
         public T Value { get; }
 
@@ -15,7 +15,7 @@ namespace System.Collections.Rolling
         private CancellationTokenSource _cancelSource;
         private bool _reset;
 
-        public BufferBoundValue(T value, int period, Action queuedRemoval)
+        public BufferSingle(T value, int period, Action queuedRemoval)
         {
             Value = value;
 
@@ -24,7 +24,7 @@ namespace System.Collections.Rolling
             _cancelSource = new();
         }
 
-        public BufferBoundValue(T value)
+        public BufferSingle(T value)
         {
             Value = value;
 
@@ -33,7 +33,7 @@ namespace System.Collections.Rolling
             _cancelSource = null!;
         }
 
-        public BufferBoundValue<T> Start()
+        public BufferSingle<T> Start()
         {
             if (_period >= 0)
                 Run(_cancelSource.Token);

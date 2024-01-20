@@ -1,4 +1,5 @@
-﻿
+﻿using System.Collections.Rolling.ValueBinders;
+using System.Diagnostics.CodeAnalysis;
 
 namespace System.Collections.Rolling
 {
@@ -7,9 +8,12 @@ namespace System.Collections.Rolling
 
     }
 
+    //[Experimental("RL0001")]
     public sealed class RollingList<T> : IRollingList<T>
     {
-        private readonly IList<BufferBoundValue<T>> _core;
+        internal readonly List<BufferSingle<T>> _core;
+
+        internal int _version;
 
         public int Count
         {
@@ -44,7 +48,7 @@ namespace System.Collections.Rolling
         // offers support of capacity buffer.
         public RollingList(int capacity)
         {
-            _core = new List<BufferBoundValue<T>>(capacity);
+            _core = new List<BufferSingle<T>>(capacity);
 
             CapacityBuffered = true;
             Capacity = capacity;
@@ -53,7 +57,7 @@ namespace System.Collections.Rolling
         // offers support of period buffer.
         public RollingList(TimeSpan expiryPeriod)
         {
-            _core = new List<BufferBoundValue<T>>();
+            _core = [];
 
             Expiration = (int)expiryPeriod.TotalMilliseconds;
             ExpiryBuffered = true;
@@ -65,7 +69,7 @@ namespace System.Collections.Rolling
         // offers support of capacity & period buffer.
         public RollingList(TimeSpan expiryPeriod, int capacity)
         {
-            _core = new List<BufferBoundValue<T>>();
+            _core = [];
 
             Expiration = (int)expiryPeriod.TotalMilliseconds;
             ExpiryBuffered = true;
@@ -78,7 +82,7 @@ namespace System.Collections.Rolling
         // offers support of capacity buffer based on the length of the provided base range.
         public RollingList(T[] baseRange)
         {
-            var range = new List<BufferBoundValue<T>>();
+            var range = new List<BufferSingle<T>>();
 
             Capacity = range.Capacity;
             CapacityBuffered = true;
@@ -92,6 +96,17 @@ namespace System.Collections.Rolling
             }
 
             _core = range;
+        }
+
+        BufferSingle<T> Create(T item)
+        {
+            if (ExpiryBuffered)
+            {
+                return new BufferSingle<T>(item, Expiration, () => Remove(item))
+                    .Start();
+            }
+            else
+                return new(item);
         }
 
         public int IndexOf(T item)
@@ -124,11 +139,13 @@ namespace System.Collections.Rolling
                 // shift back the index
                 _core[0].EarlyCancel();
             }
+            _version++;
         }
 
         public void RemoveAt(int index)
         {
             _core.RemoveAt(index);
+            _version++;
         }
 
         public void Add(T item)
@@ -140,6 +157,14 @@ namespace System.Collections.Rolling
                 // shift back the index
                 _core[0].EarlyCancel();
             }
+            _version++;
+        }
+
+        public void AddRange(IEnumerable<T> items)
+        {
+            // needs change for version increment
+            foreach (var item in items)
+                Add(item);
         }
 
         public void Clear()
@@ -180,32 +205,13 @@ namespace System.Collections.Rolling
         // ???
         public IEnumerator<T> GetEnumerator()
         {
-
+            return new BufferEnumerator<T>(this);
         }
 
         // ???
         IEnumerator IEnumerable.GetEnumerator()
         {
-            
-        }
-
-        BufferBoundValue<T> Create(T item)
-        {
-            if (ExpiryBuffered)
-            {
-                return new BufferBoundValue<T>(item, Expiration, () => Remove(item))
-                    .Start();
-            }
-            else
-                return new(item);
-        }
-    }
-
-    public static class RollingList
-    {
-        public static RollingListBuilder<T> CreateBuilder<T>()
-        {
-
+            return GetEnumerator();
         }
     }
 }
