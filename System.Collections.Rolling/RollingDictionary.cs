@@ -9,7 +9,7 @@ namespace System.Collections.Rolling
     //[Experimental("RD0001")]
     public sealed class RollingDictionary<TKey, TValue> : IRollingDictionary<TKey, TValue>
     {
-        private readonly Dictionary<BufferSingle<TKey>, TValue> _core;
+        private readonly Dictionary<Buffered<TKey>, TValue> _core;
 
         public ICollection<TKey> Keys
         {
@@ -83,11 +83,11 @@ namespace System.Collections.Rolling
 
         }
 
-        KeyValuePair<BufferSingle<TKey>, TValue> Create(KeyValuePair<TKey, TValue> item)
+        KeyValuePair<Buffered<TKey>, TValue> Create(KeyValuePair<TKey, TValue> item)
         {
             if (ExpiryBuffered)
             {
-                return new(new BufferSingle<TKey>(item.Key, Expiration, () => Remove(item.Key)).Start(), item.Value);
+                return new(new Buffered<TKey>(item.Key, Expiration, () => Remove(item.Key)).Start(), item.Value);
             }
             else
                 return new(new(item.Key), item.Value);

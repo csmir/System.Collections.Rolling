@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace System.Collections.Rolling
 {
-    internal class BufferSingle<T>
+    [DebuggerDisplay("Value = {Value}")]
+    internal record class Buffered<T>
     {
         public T Value { get; }
 
@@ -15,7 +17,7 @@ namespace System.Collections.Rolling
         private CancellationTokenSource _cancelSource;
         private bool _reset;
 
-        public BufferSingle(T value, int period, Action queuedRemoval)
+        public Buffered(T value, int period, Action queuedRemoval)
         {
             Value = value;
 
@@ -24,7 +26,7 @@ namespace System.Collections.Rolling
             _cancelSource = new();
         }
 
-        public BufferSingle(T value)
+        public Buffered(T value)
         {
             Value = value;
 
@@ -33,23 +35,31 @@ namespace System.Collections.Rolling
             _cancelSource = null!;
         }
 
-        public BufferSingle<T> Start()
+        public Buffered<T> Start()
         {
             if (_period >= 0)
+            {
                 Run(_cancelSource.Token);
+            }
 
             return this;
         }
 
-        public async void Run(CancellationToken token)
+        public void Run(CancellationToken token)
         {
             _reset = false;
-            await Task.Delay(_period, token);
+
+            Task.Delay(_period, token);
 
             if (_reset)
                 return;
 
-            _queuedRemoval();
+            lock (this) // will Value be destroyed when GC cleans up the container?
+                        // if not, this is irrelevant.
+                        // should return this type to `struct`, perhaps even `readonly struct`
+            {
+                _queuedRemoval();
+            }
         }
 
         public void Reset()
