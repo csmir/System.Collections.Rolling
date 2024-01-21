@@ -61,7 +61,6 @@ namespace System.Collections.Rolling
                         _items = s_emptyArray; // should we support empty rolling arrays?
                                                // if so, should this trigger CapacityBuffered to false? -> might result in unintended behavior on user-side.
                     }
-
                 }
             }
         }
@@ -244,10 +243,7 @@ namespace System.Collections.Rolling
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            // this operation is expensive, is there another way?
-            _items.Select(x => x.Value)
-                .ToArray()
-                .CopyTo(array, arrayIndex);
+            ContainedArray.UncontainedClone(_items).CopyTo(array, arrayIndex);
         }
 
         public bool Remove(T item)
